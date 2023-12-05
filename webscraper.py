@@ -3,6 +3,7 @@ import requests
 import os
 import glob, os, re
 from PIL import Image
+from requests_html import HTMLSession
 
 # CREATE FOLDER
 def folder_create(images, title):
@@ -101,14 +102,25 @@ def download_images(images, folder_name):
 # MAIN FUNCTION START
 def main(url):
 
+    user_agent = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
+
+    headers = { 'User-Agent': user_agent }
+
+    session = HTMLSession()
+    r = session.get(url)
+    r.html.render()
+    
     # content of URL
-    r = requests.get(url)
 
     # Parse HTML Code
-    soup = BeautifulSoup(r.text, 'html.parser')
+    soup = BeautifulSoup(r.html.raw_html, 'html.parser')
 
     # find all images in URL
-    images = soup.findAll('img')
+    images = soup.findAll('img', attrs={'class' : 'image-placeholder'})
+
+    if len(images) == 0:
+        images = soup.findAll('img', attrs={'class' : 'fixed-ratio-content'})
+
     title = soup.title.text
 
     # Call folder create function
@@ -147,12 +159,15 @@ def convert_to_pdf(folder_name):
         for f in images
     ]
 
-    pdf_path = folder_name+"/"+folder_name+".pdf"
-    images[0].save(
-        pdf_path, "PDF" ,resolution=100.0, save_all=True, append_images=images[1:]
-    )
+    if(images):
+        pdf_path = folder_name+"/"+folder_name+".pdf"
+        images[0].save(
+            pdf_path, "PDF" ,resolution=100.0, save_all=True, append_images=images[1:]
+        )
+        print("Process completed!")
+    else:
+        print("IMAGES DO NOT EXIST IN THIS LINK. PLEASE TRY ANOTHER ONE.")
 
-    print("Process completed!")
 
 # take url
 url = input("Enter URL:- ")
